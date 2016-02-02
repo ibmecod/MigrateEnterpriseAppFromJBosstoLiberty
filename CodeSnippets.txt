@@ -1,0 +1,202 @@
+Here is the updated DocumentManagerBean class that will run on Liberty server in IBM Cloud. 
+*********************************************************************************************
+package org.apache.geronimo.samples.document.ejb;
+import java.util.List;
+
+import javax.ejb.Stateless;
+
+import org.apache.geronimo.samples.document.dao.DocumentManagerDAO;
+import org.apache.geronimo.samples.document.hibernate.UserFile;
+
+@Stateless
+public class DocumentManagerBean{
+
+	public String upload(String userId, String filename) {
+               addUserFile(userId, filename);
+		return "File successfully uploaded";
+	}
+	
+	public List<UserFile> getFilesByUserid(String userid) {
+		List<UserFile> list = null;
+		try {
+			DocumentManagerDAO dmDao = new DocumentManagerDAO();
+			list = dmDao.getUserFilesByUserid(userid);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return list;
+	}
+       private void addUserFile(String userId, String filename) {
+		 DocumentManagerDAO dmDao;
+		 
+		try {
+			dmDao = new DocumentManagerDAO();
+			dmDao.addUserFile(userId, filename);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	 }
+}
+************************************************************************************************************
+
+Here is the updated RetrieveServlet class that will that will run on Liberty server in IBM Cloud.
+************************************************************************************************************
+package org.apache.geronimo.samples.document.web;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.List;
+
+import javax.ejb.EJB;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.geronimo.samples.document.ejb.DocumentManagerBean;
+import org.apache.geronimo.samples.document.hibernate.UserFile;
+
+@WebServlet({"/RetrieveServlet"})
+public class RetrieveServlet extends HttpServlet{
+
+	private static final long serialVersionUID = -2773446199481416101L;
+	@EJB
+	private DocumentManagerBean docManager;
+	
+	protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+		PrintWriter out = res.getWriter();
+		String userid = req.getUserPrincipal().getName();
+		List<UserFile> docs = docManager.getFilesByUserid(userid);
+		if (docs != null) {
+			for (int i = 0; i < docs.size(); ++i) {
+				out.append("<TR>");
+				out.append("<TD>" + i + "</TD>");
+				out.append("<TD>" + docs.get(i).getFilename() + "</TD>");
+				out.append("<TD>" + docs.get(i).getTimestamp().toString() + "</TD>");
+				out.append("</TR>");
+			}
+		}
+		out.append("</TBODY>");
+		out.append("</TABLE>");
+
+		req.setAttribute("Doclist", out);
+	}
+	
+
+	protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+		doGet(req, res);
+	}
+	
+}
+****************************************************************************************************************
+
+Here is the updated UploadServlet class that will run on Liberty server in IBM Cloud.
+****************************************************************************************************************
+package org.apache.geronimo.samples.document.web;
+
+import java.io.IOException;
+
+import javax.ejb.CreateException;
+import javax.ejb.EJB;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.geronimo.samples.document.ejb.DocumentManagerBean;
+
+
+@WebServlet({"/UploadServlet"})
+public class UploadServlet extends HttpServlet{
+
+	private static final long serialVersionUID = -2773446199481416101L;
+	@EJB
+	private DocumentManagerBean docManager;
+	
+	
+//	public void destroy() {
+//		docManagerHome = null;
+//		super.destroy();
+//	}
+//
+//	public void init() throws ServletException {
+//		try {
+//			Context context = new InitialContext();
+//			docManagerHome = (DocumentManagerHome)context.lookup(DocumentManagerHome.JNDI_NAME);
+//		} catch (Throwable e) {
+//			throw new ServletException(e);
+//		}
+//	}
+
+	protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+//		DocumentManager docManager = getDocumentManager();
+		String filename = req.getParameter("file");
+		String userID = req.getUserPrincipal().getName();
+		req.setAttribute("result", docManager.upload(userID, filename));
+		req.getRequestDispatcher("jsp/main.jsp").forward(req, res);
+	}
+
+	protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+		doGet(req, res);
+	}
+	
+	
+//	private DocumentManager getDocumentManager() throws ServletException, IOException {
+//		try {
+//			return docManagerHome.create();
+//		} catch (CreateException e) {
+//			throw new ServletException(e);
+//		} 
+//	}
+
+}
+
+****************************************************************************************************************
+Here is the updated server.xml that will run on Liberty server in IBM Cloud.
+****************************************************************************************************************
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<server>
+    <featureManager>
+		<feature>ejbLite-3.1</feature>
+		<feature>appSecurity-2.0</feature>
+		<feature>servlet-3.0</feature>
+        <feature>jsp-2.2</feature>
+        <feature>jdbc-4.0</feature>
+    </featureManager>
+    <jdbcDriver id="jdbc_DerbyDS" javax.sql.DataSource="org.apache.derby.jdbc.ClientConnectionPoolDataSource">
+        <library>
+            <file name="${DERBY_JDBC_DRIVER_PATH}/derbyclient.jar"/>
+        </library>
+    </jdbcDriver>
+    <dataSource id="jdbc_DerbyDS" jndiName="jdbc/DerbyDS" jdbcDriverRef="jdbc_DerbyDS">
+        <properties.derby.client databaseName="sampledb" minPoolSize="5" driver="org.apache.derby.jdbc.ClientDriver" driverClass="org.apache.derby.jdbc.ClientDriver" idleTimeoutMinutes="5" connectionUrl="jdbc:derby://localhost:1527/sampledb;create=false" create="false" jndiname="jdbc/DerbyDS" maxPoolSize="20" url="jdbc:derby://localhost:1527/sampledb;create=false" URL="jdbc:derby://localhost:1527/sampledb;create=false"/>
+    </dataSource>
+	<basicRegistry id="basic" realm="sampleRealm">
+	<user name="user" password="1"/>
+	<user name="editor" password="2"/>
+	<group name="authenticated">
+	<member name="user"/>
+	<member name="editor"/>
+	</group>
+	</basicRegistry>
+	
+	<application type="ear" id="DocumentManager" name="DocumentManager"
+	location="${server.config.dir}/apps/DocumentManager.ear">
+	<application-bnd>
+	<security-role name="authenticated">
+	<special-subject type="ALL_AUTHENTICATED_USERS" />
+	</security-role>
+	
+	<security-role name="uploader">
+	<group name="uploader" />
+	</security-role>
+	</application-bnd>
+	</application>
+</server>
+************************************************************************************************************************
