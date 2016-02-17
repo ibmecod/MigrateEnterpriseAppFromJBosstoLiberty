@@ -260,7 +260,7 @@ Here is the updated hibernate.cfg.xml that will run on Liberty server in IBM Clo
         <property name="cache.provider_class">org.hibernate.cache.HashtableCacheProvider</property>
         <property name="show_sql">true</property>
         <!--  will use JDBCTransactionFactory by default -->
-        <!-- <property name="transaction.factory_class">org.hibernate.transaction.JTATransactionFactory</property> -->
+        <property name="transaction.factory_class">org.hibernate.transaction.JTATransactionFactory</property>
         <property name="transaction.manager_lookup_class">org.hibernate.transaction.WebSphereExtendedJTATransactionLookup</property>
         <property name="jta.UserTransaction">java:comp/UserTransaction</property>
         <!-- mapping files -->
