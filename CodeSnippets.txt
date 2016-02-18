@@ -1,33 +1,38 @@
 Here is the updated DocumentManagerBean class that will run on Liberty server in IBM Cloud. 
 *********************************************************************************************
 package org.apache.geronimo.samples.document.ejb;
+
 import java.util.List;
 
 import javax.ejb.Stateless;
+import javax.ejb.TransactionManagement;
+import javax.ejb.TransactionManagementType;
 
 import org.apache.geronimo.samples.document.dao.DocumentManagerDAO;
 import org.apache.geronimo.samples.document.hibernate.UserFile;
 
 @Stateless
-public class DocumentManagerBean{
-
+// BMT
+@TransactionManagement(value=TransactionManagementType.BEAN)
+public class DocumentManagerBean {
+	
 	public String upload(String userId, String filename) {
-               addUserFile(userId, filename);
+		addUserFile(userId, filename);
 		return "File successfully uploaded";
 	}
-	
-	public List<UserFile> getFilesByUserid(String userid) {
-		List<UserFile> list = null;
-		try {
+
+	 public List<UserFile> getFilesByUserid(String userid) {
+		 List<UserFile> list = null;
+		 try {
 			DocumentManagerDAO dmDao = new DocumentManagerDAO();
 			list = dmDao.getUserFilesByUserid(userid);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return list;
-	}
-       private void addUserFile(String userId, String filename) {
+		   return list;
+	   }
+	 private void addUserFile(String userId, String filename) {
 		 DocumentManagerDAO dmDao;
 		 
 		try {
@@ -38,6 +43,97 @@ public class DocumentManagerBean{
 			e.printStackTrace();
 		}
 	 }
+}
+************************************************************************************************************
+
+Here is the updated DocumentManagerDAO class that will run on Liberty server in IBM Cloud. 
+*********************************************************************************************
+package org.apache.geronimo.samples.document.dao;
+
+import java.sql.Timestamp;
+import java.util.List;
+
+import org.apache.geronimo.samples.document.hibernate.UserFile;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
+import org.hibernate.cfg.Configuration;
+
+public class DocumentManagerDAO {
+
+	SessionFactory factory  = null;
+	Session session = null;
+	static int id = 1000;
+	
+	public DocumentManagerDAO() throws Exception {
+
+		factory  = new Configuration().configure("hibernate.cfg.xml").buildSessionFactory();
+
+	}
+
+	@SuppressWarnings("unchecked")
+	public List<UserFile> getUserFilesByUserid(String userid) throws Exception {
+
+		// CMT
+//		session = factory.getCurrentSession();
+		// BMT
+		session = factory.openSession();
+		
+		Query q = session.createQuery("from UserFile f where f.userid=:userid");
+		q.setString("userid", userid);
+		return q.list();
+
+	}
+
+
+	@SuppressWarnings("unchecked")
+	public List<UserFile> getUserFiles() throws Exception {
+
+		// CMT
+//		session = factory.getCurrentSession();
+		// BMT
+		session = factory.openSession();
+
+		Query q = session.createQuery("from UserFile");
+		return q.list();
+
+	}
+
+	public boolean addUserFile(String userId, String filename)
+			throws Exception {
+
+		if(userId == null || userId.isEmpty() || filename == null || filename.isEmpty()){
+			return false;
+		}
+		
+		// CMT
+//		session = factory.getCurrentSession();
+		// BMT
+		session = factory.openSession();
+		
+		long curTime = System.currentTimeMillis();
+		
+		Timestamp timestamp = new Timestamp(curTime);
+		
+		UserFile userfile = new UserFile(userId, filename, timestamp);
+
+		// CMT
+//		session.save(userfile);
+		// BMT
+		Transaction tx;
+		tx = session.beginTransaction();
+		session.save(userfile);
+		tx.commit();
+		
+		return true;
+
+	}
+
+	public void remove() throws Exception {
+
+	}
+
 }
 ************************************************************************************************************
 
@@ -99,10 +195,7 @@ package org.apache.geronimo.samples.document.web;
 
 import java.io.IOException;
 
-import javax.ejb.CreateException;
 import javax.ejb.EJB;
-import javax.naming.Context;
-import javax.naming.InitialContext;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -111,7 +204,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.geronimo.samples.document.ejb.DocumentManagerBean;
 
-
 @WebServlet({"/UploadServlet"})
 public class UploadServlet extends HttpServlet{
 
@@ -119,23 +211,7 @@ public class UploadServlet extends HttpServlet{
 	@EJB
 	private DocumentManagerBean docManager;
 	
-	
-//	public void destroy() {
-//		docManagerHome = null;
-//		super.destroy();
-//	}
-//
-//	public void init() throws ServletException {
-//		try {
-//			Context context = new InitialContext();
-//			docManagerHome = (DocumentManagerHome)context.lookup(DocumentManagerHome.JNDI_NAME);
-//		} catch (Throwable e) {
-//			throw new ServletException(e);
-//		}
-//	}
-
 	protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-//		DocumentManager docManager = getDocumentManager();
 		String filename = req.getParameter("file");
 		String userID = req.getUserPrincipal().getName();
 		req.setAttribute("result", docManager.upload(userID, filename));
@@ -146,17 +222,7 @@ public class UploadServlet extends HttpServlet{
 		doGet(req, res);
 	}
 	
-	
-//	private DocumentManager getDocumentManager() throws ServletException, IOException {
-//		try {
-//			return docManagerHome.create();
-//		} catch (CreateException e) {
-//			throw new ServletException(e);
-//		} 
-//	}
-
 }
-
 ****************************************************************************************************************
 Here is the updated server.xml that will run on Liberty server in IBM Cloud.
 ****************************************************************************************************************
