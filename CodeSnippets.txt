@@ -1,4 +1,4 @@
-Here is the updated DocumentManagerBean class that will run on Liberty server in IBM Cloud. 
+Here is the updated DocumentManagerBean class that will run on Liberty server. 
 *********************************************************************************************
 package org.apache.geronimo.samples.document.ejb;
 
@@ -44,9 +44,9 @@ public class DocumentManagerBean {
 		}
 	 }
 }
-************************************************************************************************************
+*********************************************************************************************
 
-Here is the updated DocumentManagerDAO class that will run on Liberty server in IBM Cloud. 
+Here is the updated DocumentManagerDAO class that will run on Liberty server. 
 *********************************************************************************************
 package org.apache.geronimo.samples.document.dao;
 
@@ -135,9 +135,10 @@ public class DocumentManagerDAO {
 	}
 
 }
+
 ************************************************************************************************************
 
-Here is the updated RetrieveServlet class that will that will run on Liberty server in IBM Cloud.
+Here is the updated RetrieveServlet class that will that will run on Liberty server.
 ************************************************************************************************************
 package org.apache.geronimo.samples.document.web;
 
@@ -187,9 +188,10 @@ public class RetrieveServlet extends HttpServlet{
 	}
 	
 }
+
 ****************************************************************************************************************
 
-Here is the updated UploadServlet class that will run on Liberty server in IBM Cloud.
+Here is the updated UploadServlet class that will run on Liberty server.
 ****************************************************************************************************************
 package org.apache.geronimo.samples.document.web;
 
@@ -224,7 +226,7 @@ public class UploadServlet extends HttpServlet{
 	
 }
 ****************************************************************************************************************
-Here is the updated server.xml that will run on Liberty server in IBM Cloud.
+Here is the updated server.xml that will run on Liberty server.
 ****************************************************************************************************************
 <server description="new server">
 
@@ -252,9 +254,6 @@ Here is the updated server.xml that will run on Liberty server in IBM Cloud.
 	    basicRegistry element. Specify your own user name below in the name attribute of the user element. For the password, 
 	    generate an encoded password using bin/securityUtility encode and add it in the password attribute of the user element. 
 	    Then uncomment the user element. -->
-	<basicRegistry id="basic" realm="BasicRealm"> 
-		<!-- <user name="yourUserName" password="" />  --> 
-	</basicRegistry>
     
     <!-- To access this server from a remote client add a host attribute to the following element, e.g. host="*" -->
     <httpEndpoint httpPort="9080" httpsPort="9443" id="defaultHttpEndpoint"/>
@@ -275,42 +274,53 @@ Here is the updated server.xml that will run on Liberty server in IBM Cloud.
         	<member name="editor"/>
         </group>
     </basicRegistry>
-    
-    <application type="ear" id="DocumentManager" name="DocumentManager" location="${server.config.dir}/apps/DocumentManager.ear" >
-		<application-bnd>
-			<security-role name="authenticated">
-				<special-subject type="ALL_AUTHENTICATED_USERS" />
-			</security-role>
-			<security-role name="uploader">
-				<group name="uploader" />
-			</security-role>
-		</application-bnd>
-	</application>
 
+	
+	<!-- Bluemix configuration -->
 	<library id="MySQLDriverLib">
-		<fileset id='mysql-fileset' dir='${server.config.dir}/lib' />
+		<fileset dir="${server.config.dir}/lib" id="mysql-fileset"/>
 	</library>
-	<dataSource id="DefaultDataSource" type="javax.sql.ConnectionPoolDataSource" transactional="true">
+	
+	<!--   <dataSource id="DefaultDataSource" type="javax.sql.ConnectionPoolDataSource" transactional="true">
 		<jdbcDriver libraryRef="MySQLDriverLib"/>
 		<properties
 			id='mysql-mydb-props'
-			databaseName='ic16_lab2434'
-			user='root'
-			password='object00'
+			databaseName='ad_a89dc8938b7d9fb'
+			user='b2223b9b2e78d1'
+			password='b17173c8'
 			portNumber='3306'
-			serverName='localhost'
+			serverName='us-cdbr-iron-east-03.cleardb.net'
 		/>
 		<connectionManager
 			id='mysql-mydb-conMgr'
 			maxPoolSize='10'
-		/>
+		/> 
+		</dataSource> -->
+    
+	<dataSource id="DefaultDataSource" transactional="true" type="javax.sql.ConnectionPoolDataSource">
+		<jdbcDriver libraryRef="MySQLDriverLib"/>
+		<properties databaseName="ic16_lab2434" id="mysql-mydb-props" password="object00" portNumber="3306" serverName="localhost" user="root"/>
+		<connectionManager id="mysql-mydb-conMgr" maxPoolSize="10"/>
     </dataSource>
 
+    <application type="ear" id="DocumentManager" name="DocumentManager"      location="${server.config.dir}/apps/DocumentManager.ear">
+   <application-bnd>
+      <security-role name="authenticated">
+         <special-subject type="ALL_AUTHENTICATED_USERS"/>
+      </security-role>
+      <security-role name="uploader">
+         <group name="uploader"/>
+      </security-role>
+    </application-bnd>
+ </application>
+    
+
+    <applicationMonitor updateTrigger="mbean"/>
 </server>
 ****************************************************************************************************************
-Here is the updated hibernate.cfg.xml that will run on Liberty server in IBM Cloud.
+Here is the updated hibernate.cfg.xml that will run on Liberty server.
 ****************************************************************************************************************
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 
 <!DOCTYPE hibernate-configuration PUBLIC
 	"-//Hibernate/Hibernate Configuration DTD 3.0//EN"
@@ -326,11 +336,25 @@ Here is the updated hibernate.cfg.xml that will run on Liberty server in IBM Clo
         <property name="cache.provider_class">org.hibernate.cache.HashtableCacheProvider</property>
         <property name="show_sql">true</property>
         <!--  will use JDBCTransactionFactory by default -->
-        <property name="transaction.factory_class">org.hibernate.transaction.JTATransactionFactory</property>
+		<!-- <property name="transaction.factory_class">org.hibernate.transaction.JTATransactionFactory</property> -->
+		<!-- CMT code that works -->
+		<!--
+        <property name="transaction.factory_class">org.hibernate.transaction.CMTTransactionFactory</property>
+        -->
         <property name="transaction.manager_lookup_class">org.hibernate.transaction.WebSphereExtendedJTATransactionLookup</property>
         <property name="jta.UserTransaction">java:comp/UserTransaction</property>
         <!-- mapping files -->
         <mapping resource="Files.hbm.xml"/>
     </session-factory>
 </hibernate-configuration>
+
 ****************************************************************************************************************
+applications:
+- name: documentmanager
+  path: C:\dev\ApplicationServers\wlp-8.5.5.8\wlp\usr\servers\defaultServer
+  buildpack: liberty-for-java
+  memory: 512M
+  host: documentmanagersandhya
+  domain: mybluemix.net
+  services:
+  - documentmanager-db
