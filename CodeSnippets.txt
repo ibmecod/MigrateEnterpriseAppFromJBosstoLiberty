@@ -1,4 +1,4 @@
-Here is the updated DocumentManagerBean class that will run on Liberty server. 
+Here is the updated DocumentManagerBean class that will run on Liberty server.
 *********************************************************************************************
 package org.apache.geronimo.samples.document.ejb;
 
